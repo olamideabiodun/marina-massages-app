@@ -1,14 +1,14 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD9Phv_eU0Zwm6sobcJkmVOAGjXc-bnpUE",
-  authDomain: "marina-massage-d5167.firebaseapp.com",
-  projectId: "marina-massage-d5167",
-  storageBucket: "marina-massage-d5167.firebasestorage.app",
-  messagingSenderId: "23398961355",
-  appId: "1:23398961355:web:1dbb22427d75773ad6cb4e"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
