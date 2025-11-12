@@ -1,12 +1,13 @@
+import 'dotenv/config';
+import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { collection, doc, setDoc, addDoc } from 'firebase/firestore';
 
 const seedData = async () => {
   console.log('🌱 Starting to seed data...');
 
   try {
     // Seed Services
-    console.log('📝 Adding services...');
+    console.log('Adding services...');
     
     const services = [
       {
@@ -73,11 +74,11 @@ const seedData = async () => {
         durations: service.durations,
         createdAt: new Date(),
       });
-      console.log(`✅ Added service: ${service.name}`);
+      console.log(`Added service: ${service.name}`);
     }
 
     // Seed Working Hours
-    console.log('📅 Adding working hours...');
+    console.log('Adding working hours...');
     await setDoc(doc(db, 'settings', 'working-hours'), {
       enabled: true,
       schedule: {
@@ -91,20 +92,20 @@ const seedData = async () => {
       },
       updatedAt: new Date(),
     });
-    console.log('✅ Added working hours');
+    console.log('Added working hours');
 
     // Seed Booking Policies
-    console.log('⚙️ Adding booking policies...');
+    console.log('Adding booking policies...');
     await setDoc(doc(db, 'settings', 'booking-policies'), {
       cancellationWindowHours: 24,
       bufferTimeMinutes: 15,
       advanceBookingDays: 30,
       updatedAt: new Date(),
     });
-    console.log('✅ Added booking policies');
+    console.log('Added booking policies');
 
     // Seed Sample Appointments (for testing)
-    console.log('📆 Adding sample appointments...');
+    console.log('Adding sample appointments...');
     const today = new Date();
     const appointments = [
       {
@@ -137,15 +138,15 @@ const seedData = async () => {
 
     for (const appointment of appointments) {
       await addDoc(collection(db, 'appointments'), appointment);
-      console.log(`✅ Added appointment for: ${appointment.clientName}`);
+      console.log(`Added appointment for: ${appointment.clientName}`);
     }
 
     console.log('');
-    console.log('🎉 Seeding completed successfully!');
-    console.log('✨ Your database is now ready to use.');
+    console.log('Seeding completed successfully!');
+    console.log('Your database is now ready to use.');
     
   } catch (error) {
-    console.error('❌ Error seeding data:', error);
+    console.error('Error seeding data:', error);
   }
 };
 

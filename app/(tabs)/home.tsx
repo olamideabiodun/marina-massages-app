@@ -1,37 +1,60 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { db } from '../../config/firebase';
+
+interface Service {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  durations: { minutes: number; price: number }[];
+  active: boolean;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const services = [
-    {
-      id: '1',
-      name: 'Therapeutic Massage',
-      description: 'Deep tissue work targeting muscle tension and pain relief',
-      duration: '60-120 min',
-      priceFrom: 150,
-      icon: 'hand-left' as const,
-    },
-    {
-      id: '2',
-      name: 'Correction Massage',
-      description: 'Specialized techniques for posture and alignment issues',
-      duration: '90-120 min',
-      priceFrom: 220,
-      icon: 'fitness' as const,
-    },
-    {
-      id: '3',
-      name: 'Lymphatic Drainage',
-      description: 'Gentle massage to support lymphatic system function',
-      duration: '60-90 min',
-      priceFrom: 160,
-      icon: 'water' as const,
-    },
-  ];
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      const servicesQuery = query(
+        collection(db, 'services'),
+        where('active', '==', true)
+      );
+      const querySnapshot = await getDocs(servicesQuery);
+      
+      const servicesData: Service[] = [];
+      querySnapshot.forEach((doc) => {
+        servicesData.push({
+          id: doc.id,
+          ...doc.data(),
+        } as Service);
+      });
+
+      setServices(servicesData);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#b8860b" />
+        <Text style={styles.loadingText}>Loading services...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -43,28 +66,45 @@ export default function HomeScreen() {
       <View style={styles.content}>
         <Text style={styles.sectionTitle}>Our Services</Text>
         
-        {services.map((service) => (
-          <Pressable
-            key={service.id}
-            style={styles.serviceCard}
-            onPress={() => router.push(`/service-detail?id=${service.id}`)}
-          >
-            <View style={styles.serviceIcon}>
-              <Ionicons name={service.icon} size={32} color="#b8860b" />
-            </View>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceName}>{service.name}</Text>
-              <Text style={styles.serviceDescription}>{service.description}</Text>
-              <View style={styles.serviceMeta}>
-                <Text style={styles.serviceDuration}>
-                  <Ionicons name="time-outline" size={14} color="#666" /> {service.duration}
-                </Text>
-                <Text style={styles.servicePrice}>From ${service.priceFrom}</Text>
+        {services.map((service) => {
+          if (!service.durations || service.durations.length === 0) {
+            return null;
+          }
+          
+          const minPrice = Math.min(...service.durations.map(d => d.price));
+          const durationRange = service.durations.length > 1 
+            ? `${service.durations[0].minutes}-${service.durations[service.durations.length - 1].minutes} min`
+            : `${service.durations[0].minutes} min`;
+
+          return (
+            <Pressable
+              key={service.id}
+              style={styles.serviceCard}
+              onPress={() => router.push(`/service-detail?id=${service.id}`)}
+            >
+              <View style={styles.serviceIcon}>
+                <Ionicons 
+                  name={service.icon as any} 
+                  size={32} 
+                  color="#b8860b" 
+                />
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#ccc" />
-          </Pressable>
-        ))}
+              <View style={styles.serviceInfo}>
+                <Text style={styles.serviceName}>{service.name}</Text>
+                <Text style={styles.serviceDescription} numberOfLines={2}>
+                  {service.description}
+                </Text>
+                <View style={styles.serviceMeta}>
+                  <Text style={styles.serviceDuration}>
+                    <Ionicons name="time-outline" size={14} color="#666" /> {durationRange}
+                  </Text>
+                  <Text style={styles.servicePrice}>From ${minPrice}</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#ccc" />
+            </Pressable>
+          );
+        })}
 
         <View style={styles.infoSection}>
           <Text style={styles.infoTitle}>Featured In</Text>
@@ -83,6 +123,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: '#1a1a2e',

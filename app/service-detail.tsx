@@ -1,60 +1,78 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
+interface Service {
+  id: string;
+  name: string;
+  description: string;
+  benefits: string[];
+  durations: { minutes: number; price: number }[];
+}
 
 export default function ServiceDetailScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const [service, setService] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock service data (in real app, this would come from database)
-  const services: any = {
-    '1': {
-      name: 'Therapeutic Massage',
-      description: 'A comprehensive therapeutic massage designed to address muscle tension, improve circulation, and promote overall wellness. This treatment combines various techniques including deep tissue, Swedish, and trigger point therapy, all tailored to your specific needs and health goals.',
-      benefits: [
-        'Reduces muscle tension and pain',
-        'Improves circulation and flexibility',
-        'Promotes relaxation and stress relief',
-        'Enhances overall body awareness',
-      ],
-      durations: [
-        { minutes: 60, price: 150 },
-        { minutes: 90, price: 200 },
-        { minutes: 120, price: 250 },
-      ],
-    },
-    '2': {
-      name: 'Correction Massage',
-      description: 'Specialized corrective techniques focusing on posture, alignment, and structural balance. This advanced therapy addresses chronic issues and movement patterns that contribute to pain and dysfunction.',
-      benefits: [
-        'Corrects postural imbalances',
-        'Addresses chronic pain patterns',
-        'Improves body alignment',
-        'Enhances movement quality',
-      ],
-      durations: [
-        { minutes: 90, price: 220 },
-        { minutes: 120, price: 280 },
-      ],
-    },
-    '3': {
-      name: 'Lymphatic Drainage',
-      description: 'Gentle, rhythmic massage technique that supports the lymphatic system, helping to reduce fluid retention, boost immunity, and promote natural detoxification.',
-      benefits: [
-        'Reduces swelling and fluid retention',
-        'Supports immune system function',
-        'Promotes natural detoxification',
-        'Improves skin health',
-      ],
-      durations: [
-        { minutes: 60, price: 160 },
-        { minutes: 90, price: 210 },
-      ],
-    },
+  useEffect(() => {
+    fetchService();
+  }, [params.id]);
+
+  const fetchService = async () => {
+    try {
+      const serviceDoc = await getDoc(doc(db, 'services', params.id as string));
+      
+      if (serviceDoc.exists()) {
+        setService({
+          id: serviceDoc.id,
+          ...serviceDoc.data(),
+        } as Service);
+      }
+    } catch (error) {
+      console.error('Error fetching service:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const service = services[params.id as string] || services['1'];
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </Pressable>
+          <Text style={styles.title}>Service Details</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#b8860b" />
+          <Text style={styles.loadingText}>Loading service...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!service) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </Pressable>
+          <Text style={styles.title}>Service Details</Text>
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#ccc" />
+          <Text style={styles.errorText}>Service not found</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -85,7 +103,7 @@ export default function ServiceDetailScreen() {
             <Pressable
               key={index}
               style={styles.optionCard}
-              onPress={() => router.push(`/booking-flow?serviceId=${params.id}&duration=${duration.minutes}&price=${duration.price}`)}
+              onPress={() => router.push(`/booking-flow?serviceId=${service.id}&serviceName=${service.name}&duration=${duration.minutes}&price=${duration.price}`)}
             >
               <View style={styles.optionInfo}>
                 <Text style={styles.optionDuration}>{duration.minutes} minutes</Text>
@@ -98,7 +116,7 @@ export default function ServiceDetailScreen() {
 
         <Pressable 
           style={styles.bookButton}
-          onPress={() => router.push(`/booking-flow?serviceId=${params.id}`)}
+          onPress={() => router.push(`/booking-flow?serviceId=${service.id}&serviceName=${service.name}&duration=${service.durations[0].minutes}&price=${service.durations[0].price}`)}
         >
           <Text style={styles.bookButtonText}>Book Appointment</Text>
         </Pressable>
@@ -126,6 +144,27 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 18,
+    color: '#999',
   },
   content: {
     flex: 1,
